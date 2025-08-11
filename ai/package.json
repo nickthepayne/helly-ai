@@ -1,0 +1,9 @@
+{
+  "name": "helly-ai",
+  "private": true,
+  "scripts": {
+    "dev": "uvicorn helly_ai.main:app --reload --port 8001",
+    "test": "pytest -q"
+  }
+}
+

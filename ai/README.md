@@ -8,9 +8,12 @@ Scope (MVP):
 - No concrete implementations
 - No error handling
 
-How to run tests:
-- Placeholder for now. After scaffolding, run with `pytest`.
+How to install deps:
+- make install
 
-How to run:
-- Placeholder for now. After scaffolding, run with `uvicorn helly_ai.main:app --reload`.
+How to run (npm-like):
+- npm run dev
+
+How to run tests (npm-like):
+- npm run test
 
