@@ -13,7 +13,7 @@ Create two separable applications with clean boundaries:
 1) Software App (/app): Kotlin + Spring Boot + PostgreSQL
    - Expose REST API for teams, team members, feedback CRUD
    - Persist feedback
-   - Forward “ask about a team member” questions to the AI app via HTTP
+   - Forward “ask about a team member” questions to the AI app via HTTP without requiring a team_member_id; use AI-based entity resolution from free text
 2) AI App (/ai): Python + FastAPI (API-only)
    - Endpoints for ingestion and query
    - Define RAG abstractions (vector store, embedder, pipeline) WITHOUT concrete implementations
@@ -27,6 +27,7 @@ Do not build a UI. Everything is API-only.
 - No migrations beyond minimal schema stubs
 - No auth/identity beyond placeholders
 - No infra/deployment scripts beyond simple run instructions
+- No error handling (skip for MVP)
 
 ---
 
@@ -92,25 +93,26 @@ Team Members
 
 Feedback
 - POST /feedback
-  - Body: FeedbackCreateDTO { team_member_id, content, created_at? }
-  - Behavior: persist; publish FeedbackCreated event; invoke AI ingestion sync endpoint for that member (through an application port; actual HTTP call stubbed)
+  - Body: FeedbackCreateDTO { content, created_at?, person_hint? }
+  - Behavior: persist; attempt to resolve team_member_id from content or person_hint via AI-based entity resolution; publish FeedbackCreated event; invoke AI ingestion sync endpoint for that member (through an application port; actual HTTP call stubbed)
   - Returns: FeedbackDTO { id, team_member_id, content, created_at }
-- GET /feedback?team_member_id=&from=&to=
+- GET /feedback?member_ref?=&from=&to=
+  - member_ref may be id, name, or email; resolve via AI when ambiguous
 
 Ask (delegates to AI App)
-- POST /team-members/{id}/ask
-  - Body: AskDTO { question, from?, to? }
+- POST /ask
+  - Body: AskDTO { question, from?, to?, person_hint? }
   - Returns: AskResponseDTO { answer, citations?: [FeedbackRef] }
-  - Implementation: controller -> application port -> stubbed AiClient; do not call a real server
+  - Implementation: controller -> application port -> stubbed AiClient; do not call a real server; resolve team member via AI from free text
 
 Error Model
-- Problem+JSON style: { type, title, status, detail, instance }
+- Skip for MVP (intentionally no structured errors)
 
 DTOs (Kotlin data classes)
 - TeamMemberDTO(id: UUID, name: String, role: String, relationshipToManager: String, startDate: LocalDate)
 - FeedbackDTO(id: UUID, teamMemberId: UUID, content: String, createdAt: Instant)
-- FeedbackCreateDTO(teamMemberId: UUID, content: String, createdAt: Instant?)
-- AskDTO(question: String, from: Instant?, to: Instant?)
+- FeedbackCreateDTO(content: String, createdAt: Instant?, personHint: String?)
+- AskDTO(question: String, from: Instant?, to: Instant?, personHint: String?)
 - AskResponseDTO(answer: String, citations: List<FeedbackRef>?)
 - FeedbackRef(id: UUID, createdAt: Instant, snippet: String)
 
@@ -121,9 +123,11 @@ Domain Model (no JPA yet; simple classes/interfaces)
 
 Ports/Interfaces
 - TeamMemberRepository, FeedbackRepository (CRUD method signatures only)
-- AiClient (ask(teamMemberId, question, from?, to?) -> AskResponseDTO; ingestAll(teamMemberId, items))
+- EntityResolutionService (resolveMemberRef(content: String, hint: String?) -> UUID)
+- AiClient (ask(question, from?, to?, personHint?) -> AskResponseDTO; ingestAll(teamMemberId, items))
 - EventPublisher (publish(event: FeedbackCreated))
 - Use-cases: FeedbackService.addFeedback(...), AskService.ask(...)
+  - Both use EntityResolutionService to derive team member when not explicitly provided
 
 Testing (integration scaffolds)
 - SpringBootTest with MockMvc/WebTestClient
@@ -137,14 +141,14 @@ Base path: /v1
 
 Ingestion
 - POST /ingest/member-corpus
-  - Body: IngestRequest { team_member_id: UUID, items: [FeedbackItem], from?: Instant, to?: Instant, wipe_existing: true }
-  - Semantics: replace existing corpus for member (MVP behavior)
+  - Body: IngestRequest { team_member_ref: string (id|name|email), items: [FeedbackItem], from?: Instant, to?: Instant, wipe_existing: true }
+  - Semantics: replace existing corpus for member (MVP behavior); resolve team_member_id via AI if ref is not an id
   - Response: 202 Accepted + operation id
 
 Query
 - POST /query
-  - Body: QueryRequest { team_member_id: UUID, question: String, from?: Instant, to?: Instant }
-  - Response: QueryResponse { answer: String, citations: [FeedbackRef], meta?: { used_filters } }
+  - Body: QueryRequest { question: String, from?: Instant, to?: Instant, person_hint?: String }
+  - Response: QueryResponse { answer: String, citations: [FeedbackRef], meta?: { used_filters, resolved_member_id? } }
 
 Models
 - FeedbackItem(id: UUID, content: String, created_at: Instant)
@@ -156,9 +160,11 @@ Abstractions/Protocols (Python typing.Protocol or ABC)
   - query(member_id: UUID, text: str, time_range?: (from, to), k: int=10) -> list[FeedbackRef]
 - Embedder
   - embed_texts(texts: list[str]) -> list[list[float]]
+- EntityResolver
+  - resolve_member(text: str, hint: str | None) -> UUID
 - RAGPipeline
-  - ingest(member_id, items, time_range?) -> None
-  - answer(member_id, question, time_range?) -> QueryResponse
+  - ingest(member_ref, items, time_range?) -> None
+  - answer(question, time_range?, person_hint?) -> QueryResponse
 - IngestionService, QueryService: orchestrate via the above interfaces
 
 Filtering Strategy (design only)
