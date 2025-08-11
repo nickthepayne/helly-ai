@@ -67,9 +67,9 @@ components:
           default: true
     QueryRequest:
       type: object
-      required: [question]
+      required: [text]
       properties:
-        question: { type: string }
+        text: { type: string }
         from: { type: string, format: date-time }
         to: { type: string, format: date-time }
         person_hint:

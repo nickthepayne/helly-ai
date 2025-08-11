@@ -1,0 +1,17 @@
+README.md
+pyproject.toml
+helly_ai/main.py
+helly_ai.egg-info/PKG-INFO
+helly_ai.egg-info/SOURCES.txt
+helly_ai.egg-info/dependency_links.txt
+helly_ai.egg-info/requires.txt
+helly_ai.egg-info/top_level.txt
+helly_ai/api/routers.py
+helly_ai/application/container.py
+helly_ai/domain/protocols.py
+helly_ai/infrastructure/embeddings/sentence_transformer.py
+helly_ai/infrastructure/llm/openrouter_client.py
+helly_ai/infrastructure/vectorstores/chroma_store.py
+tests/test_api.py
+tests/test_smoke.py
+tests/test_vector_integration.py

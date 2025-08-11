@@ -16,7 +16,7 @@ class IngestRequest(BaseModel):
     wipe_existing: bool = True
 
 class QueryRequest(BaseModel):
-    question: str
+    text: str
     from_: Optional[str] = None
     to: Optional[str] = None
     person_hint: Optional[str] = None
@@ -28,5 +28,5 @@ async def ingest_member_corpus(req: IngestRequest):
 
 @router.post("/query", response_model=QueryResponse)
 async def query(req: QueryRequest):
-    return _pipeline.answer(question=req.question, time_range=(req.from_, req.to), person_hint=req.person_hint)
+    return _pipeline.answer(question=req.text, time_range=(req.from_, req.to), person_hint=req.person_hint)
 
