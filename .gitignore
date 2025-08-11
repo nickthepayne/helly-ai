@@ -1,0 +1,42 @@
+# OS
+.DS_Store
+
+# IDE/Editor
+.idea/
+.vscode/
+
+# Kotlin/Java/Gradle
+**/.gradle/
+**/build/
+*.class
+
+# Keep Gradle wrapper committed
+# (do NOT ignore the gradle wrapper jar or properties)
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Logs
+*.log
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+.venv/
+venv/
+env/
+.python-version
+.coverage
+.coverage.*
+htmlcov/
+
+# Node / front-end style
+node_modules/
+dist/
+
+# Env files
+.env
+.env.*
+
