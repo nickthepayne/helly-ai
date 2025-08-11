@@ -7,16 +7,13 @@ import org.springframework.web.bind.annotation.*
 class AskController {
     @PostMapping
     fun ask(@RequestBody body: AskDTO): AskResponseDTO {
-        // Delegate to AiClient with person_hint
+        // For MVP: accept only free text; AI will resolve entities as needed
         throw UnsupportedOperationException("Not implemented in MVP scaffold")
     }
 }
 
 data class AskDTO(
-    val question: String,
-    val from: String?,
-    val to: String?,
-    val person_hint: String?
+    val text: String
 )
 
 data class AskResponseDTO(
@@ -26,7 +23,7 @@ data class AskResponseDTO(
 
 data class FeedbackRef(
     val id: String,
-    val created_at: String,
+    val createdAt: String,
     val snippet: String
 )
 

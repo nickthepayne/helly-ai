@@ -18,7 +18,6 @@ class AskService(
     private val aiClient: AiClient,
     private val entityResolutionService: EntityResolutionService
 ) {
-    fun ask(question: String, from: String?, to: String?, personHint: String?) =
-        aiClient.ask(question, from, to, personHint)
+    fun ask(text: String) = aiClient.ask(text)
 }
 

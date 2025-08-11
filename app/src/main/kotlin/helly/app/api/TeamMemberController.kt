@@ -24,15 +24,15 @@ class TeamMemberController {
 data class TeamMemberCreateDTO(
     val name: String,
     val role: String,
-    val relationship_to_manager: String,
-    val start_date: String
+    val relationshipToManager: String,
+    val startDate: String
 )
 
 data class TeamMemberDTO(
     val id: String,
     val name: String,
     val role: String,
-    val relationship_to_manager: String,
-    val start_date: String
+    val relationshipToManager: String,
+    val startDate: String
 )
 

@@ -13,11 +13,11 @@ interface TeamMemberRepository {
 
 interface FeedbackRepository {
     fun create(feedback: Feedback): Feedback
-    fun list(memberRef: String?, from: String?, to: String?): List<Feedback>
+    fun list(memberId: String?, from: String?, to: String?): List<Feedback>
 }
 
 interface AiClient {
-    fun ask(question: String, from: String?, to: String?, personHint: String?): AskResponseDTO
+    fun ask(text: String): AskResponseDTO
     fun ingestAll(teamMemberId: String, items: List<Feedback>)
 }
 
@@ -26,6 +26,6 @@ interface EventPublisher {
 }
 
 interface EntityResolutionService {
-    fun resolveMemberRef(content: String, hint: String?): String
+    fun resolveMember(content: String, hint: String?): String
 }
 
