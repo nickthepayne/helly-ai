@@ -21,6 +21,9 @@ class Embedder(Protocol):
 class EntityResolver(Protocol):
     def resolve_member(self, text: str, hint: Optional[str]) -> str: ...
 
+class LLMClient(Protocol):
+    def complete(self, prompt: str) -> str: ...
+
 class QueryResponse(BaseModel):
     answer: str
     citations: List[FeedbackRef] | None = None
