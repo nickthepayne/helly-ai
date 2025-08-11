@@ -1,14 +1,14 @@
 package helly.app.api
 
+import helly.app.application.AskService
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/v1/ask")
-class AskController {
+class AskController(private val service: AskService) {
     @PostMapping
     fun ask(@RequestBody body: AskDTO): AskResponseDTO {
-        // For MVP: accept only free text; AI will resolve entities as needed
-        throw UnsupportedOperationException("Not implemented in MVP scaffold")
+        return service.ask(body.text)
     }
 }
 

@@ -1,14 +1,17 @@
 package helly.app.api
 
+import helly.app.application.FeedbackRepository
+import helly.app.application.FeedbackService
+import helly.app.domain.Feedback
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/v1/feedback")
-class FeedbackController {
+class FeedbackController(private val service: FeedbackService, private val repo: FeedbackRepository) {
     @PostMapping
     fun addFeedback(@RequestBody body: FeedbackCreateDTO): FeedbackDTO {
-        // Derive team member via EntityResolutionService (design only)
-        throw UnsupportedOperationException("Not implemented in MVP scaffold")
+        val saved = service.addFeedback(content = body.content, createdAt = body.createdAt, personHint = body.personHint)
+        return FeedbackDTO(saved.id, saved.teamMemberId, saved.content, saved.createdAt)
     }
 
     @GetMapping
@@ -17,7 +20,7 @@ class FeedbackController {
         @RequestParam(name = "from", required = false) from: String?, // optional time filter (ISO8601)
         @RequestParam(name = "to", required = false) to: String? // optional time filter (ISO8601)
     ): List<FeedbackDTO> {
-        throw UnsupportedOperationException("Not implemented in MVP scaffold")
+        return repo.list(memberId, from, to).map { FeedbackDTO(it.id, it.teamMemberId, it.content, it.createdAt) }
     }
 }
 

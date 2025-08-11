@@ -20,23 +20,23 @@ class ApiEndpointsTest {
     lateinit var rest: TestRestTemplate
 
     @Test
-    fun `POST ask should currently return 5xx (not implemented)`() {
+    fun `POST ask should return 2xx with scaffolded answer`() {
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
         val body = mapOf("text" to "What should I discuss with Max tomorrow?")
         val req = HttpEntity(body, headers)
         val resp = rest.postForEntity("http://localhost:$port/v1/ask", req, String::class.java)
-        assertThat(resp.statusCode.is5xxServerError).isTrue
+        assertThat(resp.statusCode.is2xxSuccessful).isTrue
     }
 
     @Test
-    fun `POST feedback should currently return 5xx (not implemented)`() {
+    fun `POST feedback should return 2xx after persisting`() {
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
         val body = mapOf("content" to "Max did an amazing job with X")
         val req = HttpEntity(body, headers)
         val resp = rest.postForEntity("http://localhost:$port/v1/feedback", req, String::class.java)
-        assertThat(resp.statusCode.is5xxServerError).isTrue
+        assertThat(resp.statusCode.is2xxSuccessful).isTrue
     }
 }
 
