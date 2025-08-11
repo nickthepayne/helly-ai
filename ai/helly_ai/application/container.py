@@ -5,9 +5,18 @@ Swappable components exposed via factory functions.
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing import Optional, List, Tuple
 
-from helly_ai.domain.protocols import VectorStore, Embedder, EntityResolver, LLMClient, RAGPipeline
+from helly_ai.domain.protocols import (
+    VectorStore,
+    Embedder,
+    EntityResolver,
+    LLMClient,
+    RAGPipeline,
+    FeedbackItem,
+    FeedbackRef,
+    QueryResponse,
+)
 
 # Implementations
 try:
@@ -47,21 +56,43 @@ def make_llm_client() -> LLMClient:
     return OpenRouterLLMClient()
 
 
-class DefaultRAGPipeline:
+class DefaultRAGPipeline(RAGPipeline):
     def __init__(self, vector_store: VectorStore, embedder: Embedder, llm: LLMClient):
         self._vs = vector_store
         self._emb = embedder
         self._llm = llm
 
-    # Placeholder methods; real logic to be implemented later
-    def ingest(self, member_ref, items, time_range=None):  # type: ignore[no-redef]
-        raise NotImplementedError
+    def ingest(self, member_ref: str, items: List[FeedbackItem], time_range: Optional[Tuple[Optional[str], Optional[str]]] = None) -> None:
+        # For MVP: assume member_ref is already a concrete member_id
+        self._vs.upsert_member_corpus(member_id=member_ref, items=items, time_range=time_range)
 
-    def answer(self, question, time_range=None, person_hint=None):  # type: ignore[no-redef]
-        raise NotImplementedError
+    def answer(
+        self,
+        question: str,
+        time_range: Optional[Tuple[Optional[str], Optional[str]]] = None,
+        person_hint: Optional[str] = None,
+    ) -> QueryResponse:
+        # For MVP: person_hint is the member_id. Entity resolution can be added later.
+        member_id = person_hint or "unknown"
+        citations: List[FeedbackRef] = self._vs.query(member_id=member_id, text=question, time_range=time_range, k=5)
+        context = "\n".join(f"- {c.snippet}" for c in citations)
+        prompt = f"Question: {question}\nContext:\n{context}"
+        answer = self._llm.complete(prompt)
+        return QueryResponse(answer=answer, citations=citations, meta={"member_id": member_id})
 
 
 def make_rag_pipeline() -> RAGPipeline:
     emb = make_embedder()
     return DefaultRAGPipeline(make_vector_store(emb), emb, make_llm_client())  # type: ignore[return-value]
+
+
+def make_rag_pipeline_with(
+    llm: Optional[LLMClient] = None,
+    embedder: Optional[Embedder] = None,
+    vector_store: Optional[VectorStore] = None,
+) -> RAGPipeline:
+    emb = embedder or make_embedder()
+    vs = vector_store or make_vector_store(emb)
+    llm_client = llm or make_llm_client()
+    return DefaultRAGPipeline(vs, emb, llm_client)  # type: ignore[return-value]
 

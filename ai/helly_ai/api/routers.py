@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from helly_ai.application.container import make_rag_pipeline
-from helly_ai.domain.protocols import FeedbackItem, FeedbackRef, QueryResponse
+from helly_ai.domain.protocols import FeedbackItem, QueryResponse
 
 router = APIRouter(prefix="/v1")
 _pipeline = make_rag_pipeline()
