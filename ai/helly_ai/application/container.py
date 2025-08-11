@@ -10,13 +10,14 @@ from typing import Optional, List, Tuple
 from helly_ai.domain.protocols import (
     VectorStore,
     Embedder,
-    EntityResolver,
     LLMClient,
     RAGPipeline,
     FeedbackItem,
     FeedbackRef,
     QueryResponse,
 )
+from helly_ai.application.resolution_service import MemberResolutionService
+from helly_ai.domain.resolution import ResolveCandidate, ResolveResponse, ResolveHit
 
 # Implementations
 try:
@@ -95,4 +96,10 @@ def make_rag_pipeline_with(
     vs = vector_store or make_vector_store(emb)
     llm_client = llm or make_llm_client()
     return DefaultRAGPipeline(vs, emb, llm_client)  # type: ignore[return-value]
+
+# Member resolution factory (assistive; app remains the authority)
+
+def make_member_resolution_service(llm: Optional[LLMClient] = None) -> MemberResolutionService:
+    return MemberResolutionService(llm or make_llm_client())
+
 
