@@ -26,18 +26,19 @@ except Exception:  # pragma: no cover
     OpenRouterLLMClient = None  # type: ignore
 
 
-def make_vector_store() -> VectorStore:
-    if ChromaVectorStore is None:
-        raise RuntimeError("ChromaVectorStore not available; install 'chromadb'.")
-    persist = os.getenv("CHROMA_PERSIST_DIR", ".chroma")
-    return ChromaVectorStore(persist)
-
-
 def make_embedder() -> Embedder:
     if LocalSentenceTransformerEmbedder is None:
         raise RuntimeError("LocalSentenceTransformerEmbedder not available; install 'sentence-transformers'.")
     model = os.getenv("SENTENCE_TRANSFORMER_MODEL", "all-MiniLM-L6-v2")
     return LocalSentenceTransformerEmbedder(model)
+
+
+def make_vector_store(embedder: Embedder | None = None) -> VectorStore:
+    if ChromaVectorStore is None:
+        raise RuntimeError("ChromaVectorStore not available; install 'chromadb'.")
+    emb = embedder or make_embedder()
+    persist = os.getenv("CHROMA_PERSIST_DIR", ".chroma")
+    return ChromaVectorStore(embedder=emb, persist_dir=persist)
 
 
 def make_llm_client() -> LLMClient:
@@ -61,5 +62,6 @@ class DefaultRAGPipeline:
 
 
 def make_rag_pipeline() -> RAGPipeline:
-    return DefaultRAGPipeline(make_vector_store(), make_embedder(), make_llm_client())  # type: ignore[return-value]
+    emb = make_embedder()
+    return DefaultRAGPipeline(make_vector_store(emb), emb, make_llm_client())  # type: ignore[return-value]
 

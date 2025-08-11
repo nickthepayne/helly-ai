@@ -2,17 +2,11 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import List, Optional
 
+from helly_ai.application.container import make_rag_pipeline
+from helly_ai.domain.protocols import FeedbackItem, FeedbackRef, QueryResponse
+
 router = APIRouter(prefix="/v1")
-
-class FeedbackItem(BaseModel):
-    id: str
-    content: str
-    created_at: str
-
-class FeedbackRef(BaseModel):
-    id: str
-    created_at: str
-    snippet: str
+_pipeline = make_rag_pipeline()
 
 class IngestRequest(BaseModel):
     team_member_ref: str
@@ -27,16 +21,12 @@ class QueryRequest(BaseModel):
     to: Optional[str] = None
     person_hint: Optional[str] = None
 
-class QueryResponse(BaseModel):
-    answer: str
-    citations: Optional[List[FeedbackRef]] = None
-    meta: Optional[dict] = None
-
 @router.post("/ingest/member-corpus", status_code=202)
 async def ingest_member_corpus(req: IngestRequest):
-    raise NotImplementedError("MVP scaffold only")
+    _pipeline.ingest(member_ref=req.team_member_ref, items=req.items, time_range=(req.from_, req.to))
+    return {"status": "accepted"}
 
 @router.post("/query", response_model=QueryResponse)
 async def query(req: QueryRequest):
-    raise NotImplementedError("MVP scaffold only")
+    return _pipeline.answer(question=req.question, time_range=(req.from_, req.to), person_hint=req.person_hint)
 
