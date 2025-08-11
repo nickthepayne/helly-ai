@@ -18,9 +18,6 @@ class VectorStore(Protocol):
 class Embedder(Protocol):
     def embed_texts(self, texts: List[str]) -> List[List[float]]: ...
 
-class EntityResolver(Protocol):
-    def resolve_member(self, text: str, hint: Optional[str]) -> str: ...
-
 class LLMClient(Protocol):
     def complete(self, prompt: str) -> str: ...
 

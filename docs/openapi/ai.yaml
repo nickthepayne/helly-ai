@@ -33,6 +33,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QueryResponse'
+  /resolve/member:
+    post:
+      summary: Given free text and a candidate list, return the best matching member id(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolveResponse'
 components:
   schemas:
     FeedbackItem:
@@ -93,4 +109,41 @@ components:
             resolved_member_id:
               type: string
               format: uuid
+    ResolveCandidate:
+      type: object
+      required: [id, displayName]
+      properties:
+        id: { type: string }
+        displayName: { type: string }
+        emails:
+          type: array
+          items: { type: string }
+        aliases:
+          type: array
+          items: { type: string }
+    ResolveRequest:
+      type: object
+      required: [text, candidates]
+      properties:
+        text: { type: string }
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResolveCandidate'
+        context: { type: string }
+    ResolveHit:
+      type: object
+      required: [id, score]
+      properties:
+        id: { type: string }
+        score: { type: number, format: float }
+        rationale: { type: string }
+    ResolveResponse:
+      type: object
+      properties:
+        topCandidate: { $ref: '#/components/schemas/ResolveHit' }
+        alternatives:
+          type: array
+          items: { $ref: '#/components/schemas/ResolveHit' }
+        confidence: { type: string }
 
