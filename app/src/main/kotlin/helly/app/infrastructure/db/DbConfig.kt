@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Profile
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import javax.sql.DataSource
 
-@Profile("db")
 @Configuration
 class DbConfig {
     @Bean

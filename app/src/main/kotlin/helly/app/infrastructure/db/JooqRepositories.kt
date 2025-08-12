@@ -8,9 +8,7 @@ import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Profile
 
-@Profile("db")
 @Configuration
 class DbRepositoriesConfig {
     @Bean
@@ -37,17 +35,11 @@ class JooqTeamMemberRepository(private val dsl: DSLContext) : TeamMemberReposito
     }
 
     override fun get(id: String): TeamMember? {
-        val r = dsl.select(ID, NAME, ROLE, REL, START)
+        return dsl.select(ID, NAME, ROLE, REL, START)
             .from(TM)
             .where(ID.eq(id))
-            .fetchOne() ?: return null
-        return TeamMember(
-            id = r.get(ID)!!,
-            name = r.get(NAME)!!,
-            role = r.get(ROLE)!!,
-            relationshipToManager = r.get(REL)!!,
-            startDate = r.get(START)!!
-        )
+            .fetchInto(TeamMember::class.java)
+            .firstOrNull()
     }
 
     override fun list(search: String?): List<TeamMember> {
@@ -56,15 +48,7 @@ class JooqTeamMemberRepository(private val dsl: DSLContext) : TeamMemberReposito
             .from(TM)
             .where(cond)
             .orderBy(NAME.asc())
-            .fetch { r ->
-                TeamMember(
-                    id = r.get(ID)!!,
-                    name = r.get(NAME)!!,
-                    role = r.get(ROLE)!!,
-                    relationshipToManager = r.get(REL)!!,
-                    startDate = r.get(START)!!
-                )
-            }
+            .fetchInto(TeamMember::class.java)
     }
 }
 
@@ -92,14 +76,7 @@ class JooqFeedbackRepository(private val dsl: DSLContext) : FeedbackRepository {
             .from(FB)
             .where(cond)
             .orderBy(CREATED_AT.asc())
-            .fetch { r ->
-                Feedback(
-                    id = r.get(ID)!!,
-                    teamMemberId = r.get(MEMBER_ID)!!,
-                    content = r.get(CONTENT)!!,
-                    createdAt = r.get(CREATED_AT)!!
-                )
-            }
+            .fetchInto(Feedback::class.java)
     }
 }
 

@@ -1,0 +1,7 @@
+spring:
+  jooq:
+    sql-dialect: SQLITE
+app:
+  db:
+    url: jdbc:sqlite:build/helly.db
+

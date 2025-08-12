@@ -6,10 +6,8 @@ import helly.app.domain.Feedback
 import helly.app.domain.TeamMember
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Profile
 import java.time.Instant
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 
 @Configuration
 class AppConfig {
@@ -36,44 +34,6 @@ class AppConfig {
         AskService(aiClient, entityResolutionService)
 }
 
-// In-memory repository implementations (active when profile 'inmem' is selected)
-@Profile("inmem")
-@Configuration
-class InmemRepositoriesConfig {
-    @Bean
-    fun teamMemberRepository(): TeamMemberRepository = InMemoryTeamMemberRepository()
-
-    @Bean
-    fun feedbackRepository(): FeedbackRepository = InMemoryFeedbackRepository()
-}
-
-class InMemoryTeamMemberRepository : TeamMemberRepository {
-    private val data = ConcurrentHashMap<String, TeamMember>()
-    override fun create(member: TeamMember): TeamMember {
-        data[member.id] = member
-        return member
-    }
-    override fun get(id: String): TeamMember? = data[id]
-    override fun list(search: String?): List<TeamMember> =
-        data.values.filter { search.isNullOrBlank() || it.name.contains(search!!, ignoreCase = true) }
-}
-
-class InMemoryFeedbackRepository : FeedbackRepository {
-    private val data = ConcurrentHashMap<String, Feedback>()
-    override fun create(feedback: Feedback): Feedback {
-        data[feedback.id] = feedback
-        return feedback
-    }
-    override fun list(memberId: String?, from: String?, to: String?): List<Feedback> {
-        val fromTs = from?.let { Instant.parse(it) }
-        val toTs = to?.let { Instant.parse(it) }
-        return data.values.filter { f ->
-            (memberId == null || f.teamMemberId == memberId) &&
-            (fromTs == null || Instant.parse(f.createdAt) >= fromTs) &&
-            (toTs == null || Instant.parse(f.createdAt) <= toTs)
-        }.sortedBy { it.createdAt }
-    }
-}
 
 class NoopEventPublisher : EventPublisher {
     override fun publish(event: helly.app.domain.FeedbackCreated) { /* no-op */ }
