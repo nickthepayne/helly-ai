@@ -87,8 +87,10 @@ def cmd_up(args):
     # Give the app a head start to build
     time.sleep(2)
 
-    print(f"Starting /ai: {' '.join(ai_cmd)} (cwd={AI_DIR})")
-    ai = run_cmd(ai_cmd, cwd=AI_DIR)
+    ai = None
+    if not getattr(args, "skip_ai", False):
+        print(f"Starting /ai: {' '.join(ai_cmd)} (cwd={AI_DIR})")
+        ai = run_cmd(ai_cmd, cwd=AI_DIR)
 
     try:
         # Stream both until Ctrl+C
@@ -96,7 +98,7 @@ def cmd_up(args):
             if app.poll() is not None:
                 print("/app stopped. Exiting...")
                 break
-            if ai.poll() is not None:
+            if ai is not None and ai.poll() is not None:
                 print("/ai stopped. Exiting...")
                 break
             # Non-blocking read; rely on line-buffered pipes
@@ -106,7 +108,7 @@ def cmd_up(args):
                     if not line:
                         break
                     sys.stdout.write(f"[app] {line}")
-            if ai.stdout and not ai.stdout.closed:
+            if ai is not None and ai.stdout and not ai.stdout.closed:
                 while True:
                     line = ai.stdout.readline()
                     if not line:
@@ -117,8 +119,31 @@ def cmd_up(args):
     except KeyboardInterrupt:
         print("\nStopping services...")
     finally:
-        stop_proc(ai)
+        if ai is not None:
+            stop_proc(ai)
         stop_proc(app)
+
+
+
+def cmd_wipe(args):
+    # Remove SQLite DB files created by the app
+    to_remove = [
+        os.path.join(APP_DIR, "build", "helly.db"),
+        os.path.join(APP_DIR, "build", "test-helly.db"),
+    ]
+    removed = []
+    for path in to_remove:
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+                removed.append(path)
+        except Exception as e:
+            print(f"Failed to remove {path}: {e}")
+            sys.exit(1)
+    if removed:
+        print("Removed:\n" + "\n".join(removed))
+    else:
+        print("No DB files found to remove.")
 
 
 def http_post(path: str, body: dict, base_url: Optional[str] = None):
@@ -174,6 +199,7 @@ def main():
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     up = sub.add_parser("up", help="Start both /app and /ai (Ctrl+C to stop)")
+    up.add_argument("--skip-ai", action="store_true", help="Do not start /ai")
     up.set_defaults(func=cmd_up)
 
     cm = sub.add_parser("create-member", help="POST /v1/team-members")
@@ -195,6 +221,9 @@ def main():
     ask.add_argument("--text", required=True)
     ask.add_argument("--base-url", default=DEFAULT_APP_URL)
     ask.set_defaults(func=cmd_ask)
+
+    wipe = sub.add_parser("wipe", help="Remove local SQLite DB files to start fresh")
+    wipe.set_defaults(func=cmd_wipe)
 
     args = parser.parse_args()
     args.func(args)

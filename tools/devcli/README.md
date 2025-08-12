@@ -20,3 +20,29 @@ Minimal helper to run both backends and call the /app APIs. No external deps.
 
 Base URL defaults to `http://localhost:8080`. Override with `--base-url` or env `APP_URL`.
 
+
+
+## Example: no-AI member create & feedback
+
+Start only the app, then create a member and add feedback using the CLI.
+
+```bash
+# Start only /app (no /ai)
+python3 tools/devcli/devcli.py up --skip-ai
+# In another terminal:
+python3 tools/devcli/devcli.py create-member \
+  --name "Max Muster" \
+  --role "Engineer" \
+  --relationship "reports" \
+  --start-date 2024-01-01
+# Use the printed member id below
+python3 tools/devcli/devcli.py add-feedback \
+  --content "Max improved the API performance significantly." \
+  --member-id <member-id>
+```
+
+To start fresh, you can wipe local DBs:
+
+```bash
+python3 tools/devcli/devcli.py wipe
+```
