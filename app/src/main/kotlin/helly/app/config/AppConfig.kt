@@ -18,8 +18,6 @@ class AppConfig {
     @Bean
     fun entityResolutionService(): EntityResolutionService = SimpleEntityResolutionService()
 
-    @Bean
-    fun aiClient(): AiClient = NoopAiClient()
 
     @Bean
     fun feedbackService(
@@ -28,6 +26,16 @@ class AppConfig {
         entityResolutionService: EntityResolutionService,
         aiClient: AiClient
     ): FeedbackService = FeedbackService(feedbackRepository, eventPublisher, entityResolutionService, aiClient)
+
+
+    @Bean
+    fun restTemplate(): org.springframework.web.client.RestTemplate = org.springframework.web.client.RestTemplate()
+
+    @Bean
+    fun aiClient(): AiClient {
+        val baseUrl = System.getenv("AI_BASE_URL") ?: "http://localhost:8001"
+        return helly.app.infrastructure.ai.HttpAiClient(restTemplate(), baseUrl)
+    }
 
     @Bean
     fun askService(aiClient: AiClient, entityResolutionService: EntityResolutionService): AskService =

@@ -12,12 +12,17 @@ from typing import List, Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+import socket
 
 # Paths and defaults
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 APP_DIR = os.path.join(ROOT, "app")
 AI_DIR = os.path.join(ROOT, "ai")
 DEFAULT_APP_URL = os.getenv("APP_URL", "http://localhost:8080")
+# Fixed dev ports
+APP_PORT = 8080
+AI_PORT = 8001
+
 
 
 # ----- Process helpers -----
@@ -101,6 +106,12 @@ def http_get(path: str, query: dict | None = None, base_url: Optional[str] = Non
         sys.exit(1)
 
 
+def is_port_free(port: int, host: str = "127.0.0.1") -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)
+        return s.connect_ex((host, port)) != 0
+
+
 # ----- Commands -----
 
 def cmd_up(args):
@@ -108,21 +119,27 @@ def cmd_up(args):
     ai_cmd = choose_ai_cmd()
 
     print(f"Starting /app: {' '.join(app_cmd)} (cwd={APP_DIR})")
+    if not is_port_free(APP_PORT):
+        print(f"Port {APP_PORT} is busy. Please free it and retry.")
+        sys.exit(1)
     app = run_cmd(app_cmd, cwd=APP_DIR)
 
+    # Give the app a head start to build
     time.sleep(2)
 
-    ai = None
-    if not getattr(args, "skip_ai", False):
-        print(f"Starting /ai: {' '.join(ai_cmd)} (cwd={AI_DIR})")
-        ai = run_cmd(ai_cmd, cwd=AI_DIR)
+    print(f"Starting /ai: {' '.join(ai_cmd)} (cwd={AI_DIR})")
+    if not is_port_free(AI_PORT):
+        print(f"Port {AI_PORT} is busy. Please free it and retry.")
+        stop_proc(app)
+        sys.exit(1)
+    ai = run_cmd(ai_cmd, cwd=AI_DIR)
 
     try:
         while True:
             if app.poll() is not None:
                 print("/app stopped. Exiting...")
                 break
-            if ai is not None and ai.poll() is not None:
+            if ai.poll() is not None:
                 print("/ai stopped. Exiting...")
                 break
             if app.stdout and not app.stdout.closed:
@@ -131,7 +148,7 @@ def cmd_up(args):
                     if not line:
                         break
                     sys.stdout.write(f"[app] {line}")
-            if ai is not None and ai.stdout and not ai.stdout.closed:
+            if ai.stdout and not ai.stdout.closed:
                 while True:
                     line = ai.stdout.readline()
                     if not line:
@@ -142,8 +159,7 @@ def cmd_up(args):
     except KeyboardInterrupt:
         print("\nStopping services...")
     finally:
-        if ai is not None:
-            stop_proc(ai)
+        stop_proc(ai)
         stop_proc(app)
 
 

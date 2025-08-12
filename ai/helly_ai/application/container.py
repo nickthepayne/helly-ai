@@ -38,14 +38,24 @@ except Exception:  # pragma: no cover
 
 def make_embedder() -> Embedder:
     if LocalSentenceTransformerEmbedder is None:
-        raise RuntimeError("LocalSentenceTransformerEmbedder not available; install 'sentence-transformers'.")
+        # Dev fallback: no-op embedder
+        class _DummyEmb(Embedder):
+            def embed_texts(self, texts: List[str]) -> List[List[float]]:
+                return [[0.0] * 3 for _ in texts]
+        return _DummyEmb()  # type: ignore[return-value]
     model = os.getenv("SENTENCE_TRANSFORMER_MODEL", "all-MiniLM-L6-v2")
     return LocalSentenceTransformerEmbedder(model)
 
 
 def make_vector_store(embedder: Embedder | None = None) -> VectorStore:
     if ChromaVectorStore is None:
-        raise RuntimeError("ChromaVectorStore not available; install 'chromadb'.")
+        # Dev fallback: in-memory vector store that returns last 0 citations
+        class _DummyVS(VectorStore):
+            def upsert_member_corpus(self, member_id: str, items: List[FeedbackItem], time_range: Optional[tuple[str, str]] = None) -> None:
+                pass
+            def query(self, member_id: str, text: str, time_range: Optional[tuple[str, str]] = None, k: int = 10) -> List[FeedbackRef]:
+                return []
+        return _DummyVS()  # type: ignore[return-value]
     emb = embedder or make_embedder()
     persist = os.getenv("CHROMA_PERSIST_DIR", ".chroma")
     return ChromaVectorStore(embedder=emb, persist_dir=persist)
@@ -53,7 +63,11 @@ def make_vector_store(embedder: Embedder | None = None) -> VectorStore:
 
 def make_llm_client() -> LLMClient:
     if OpenRouterLLMClient is None:
-        raise RuntimeError("OpenRouterLLMClient not available; install 'openai'.")
+        # Dev fallback: canned text
+        class _DummyLLM(LLMClient):
+            def complete(self, prompt: str) -> str:
+                return "[dev] mock answer"
+        return _DummyLLM()  # type: ignore[return-value]
     return OpenRouterLLMClient()
 
 
