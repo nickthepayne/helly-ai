@@ -16,12 +16,14 @@ import argparse
 import json
 import os
 import signal
+import sqlite3
 import subprocess
 import sys
 import time
 from typing import List, Optional
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
+from urllib.parse import urlencode
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 APP_DIR = os.path.join(ROOT, "app")
@@ -126,24 +128,38 @@ def cmd_up(args):
 
 
 def cmd_wipe(args):
-    # Remove SQLite DB files created by the app
-    to_remove = [
-        os.path.join(APP_DIR, "build", "helly.db"),
-        os.path.join(APP_DIR, "build", "test-helly.db"),
-    ]
-    removed = []
-    for path in to_remove:
-        try:
-            if os.path.exists(path):
-                os.remove(path)
-                removed.append(path)
-        except Exception as e:
-            print(f"Failed to remove {path}: {e}")
-            sys.exit(1)
-    if removed:
-        print("Removed:\n" + "\n".join(removed))
-    else:
-        print("No DB files found to remove.")
+    # Clear all tables in SQLite DB (keep schema)
+    import sqlite3
+
+    db_path = os.path.join(APP_DIR, "build", "helly.db")
+    if not os.path.exists(db_path):
+        print(f"No DB file found at {db_path}")
+        return
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Get all table names except flyway_schema_history
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'flyway_%'")
+        tables = cursor.fetchall()
+
+        # Clear each table
+        cleared = []
+        for (table_name,) in tables:
+            cursor.execute(f"DELETE FROM {table_name}")
+            cleared.append(table_name)
+
+        conn.commit()
+        conn.close()
+
+        if cleared:
+            print("Cleared tables:\n" + "\n".join(cleared))
+        else:
+            print("No tables found to clear.")
+    except Exception as e:
+        print(f"Failed to clear tables: {e}")
+        sys.exit(1)
 
 
 def http_post(path: str, body: dict, base_url: Optional[str] = None):
@@ -165,6 +181,27 @@ def http_post(path: str, body: dict, base_url: Optional[str] = None):
         sys.exit(1)
 
 
+def http_get(path: str, query: dict | None = None, base_url: Optional[str] = None):
+    url = (base_url or DEFAULT_APP_URL).rstrip("/") + path
+    if query:
+        url += "?" + urlencode({k: v for k, v in query.items() if v is not None})
+    req = Request(url, method="GET")
+    try:
+        with urlopen(req) as resp:
+            payload = resp.read().decode("utf-8")
+            try:
+                return json.loads(payload)
+            except json.JSONDecodeError:
+                return {"raw": payload}
+    except HTTPError as e:
+        print(f"HTTP {e.code} calling {url}: {e.read().decode('utf-8')}")
+        sys.exit(1)
+    except URLError as e:
+        print(f"Error calling {url}: {e}")
+        sys.exit(1)
+
+
+
 def cmd_create_member(args):
     payload = {
         "name": args.name,
@@ -173,6 +210,12 @@ def cmd_create_member(args):
         "startDate": args.start_date,
     }
     resp = http_post("/v1/team-members", payload, args.base_url)
+    print(json.dumps(resp, indent=2))
+
+
+def cmd_list_feedback(args):
+    query = {"memberId": args.member_id, "from": args.from_ts, "to": args.to_ts}
+    resp = http_get("/v1/feedback", query, args.base_url)
     print(json.dumps(resp, indent=2))
 
 
@@ -221,6 +264,14 @@ def main():
     ask.add_argument("--text", required=True)
     ask.add_argument("--base-url", default=DEFAULT_APP_URL)
     ask.set_defaults(func=cmd_ask)
+
+
+    lf = sub.add_parser("list-feedback", help="GET /v1/feedback")
+    lf.add_argument("--member-id", required=False)
+    lf.add_argument("--from-ts", required=False)
+    lf.add_argument("--to-ts", required=False)
+    lf.add_argument("--base-url", default=DEFAULT_APP_URL)
+    lf.set_defaults(func=cmd_list_feedback)
 
     wipe = sub.add_parser("wipe", help="Remove local SQLite DB files to start fresh")
     wipe.set_defaults(func=cmd_wipe)

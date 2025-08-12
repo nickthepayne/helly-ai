@@ -19,6 +19,9 @@ Minimal helper to run both backends and call the /app APIs. No external deps.
   - `python3 tools/devcli/devcli.py ask --text "What should I discuss with Max?"`
 
 Base URL defaults to `http://localhost:8080`. Override with `--base-url` or env `APP_URL`.
+- List feedback (optionally filter by member/time):
+  - `python3 tools/devcli/devcli.py list-feedback [--member-id <uuid>] [--from-ts 2024-06-01T00:00:00Z] [--to-ts 2024-06-30T23:59:59Z]`
+
 
 
 
