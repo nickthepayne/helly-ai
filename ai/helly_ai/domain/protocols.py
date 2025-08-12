@@ -23,8 +23,8 @@ class LLMClient(Protocol):
 
 class QueryResponse(BaseModel):
     answer: str
-    citations: List[FeedbackRef] | None = None
-    meta: dict | None = None
+    citations: Optional[List[FeedbackRef]] = None
+    meta: Optional[dict] = None
 
 class RAGPipeline(Protocol):
     def ingest(self, member_ref: str, items: List[FeedbackItem], time_range: Optional[tuple[str, str]] = None) -> None: ...
