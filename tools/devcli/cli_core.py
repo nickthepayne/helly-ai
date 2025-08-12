@@ -13,6 +13,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import socket
+import threading
 
 # Paths and defaults
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -63,6 +64,15 @@ def stop_proc(proc: subprocess.Popen):
             proc.terminate()
         except Exception:
             pass
+
+
+def _drain(name: str, proc: subprocess.Popen):
+    # Drain stdout in a background thread to avoid blocking
+    assert proc.stdout is not None
+    for line in iter(proc.stdout.readline, ""):
+        sys.stdout.write(f"[{name}] {line}")
+        sys.stdout.flush()
+
 
 
 # ----- HTTP helpers -----
@@ -124,6 +134,10 @@ def cmd_up(args):
         sys.exit(1)
     app = run_cmd(app_cmd, cwd=APP_DIR)
 
+    # Start draining app logs immediately in a background thread
+    t_app = threading.Thread(target=_drain, args=("app", app), daemon=True)
+    t_app.start()
+
     # Give the app a head start to build
     time.sleep(2)
 
@@ -134,6 +148,10 @@ def cmd_up(args):
         sys.exit(1)
     ai = run_cmd(ai_cmd, cwd=AI_DIR)
 
+    # Start draining AI logs in background too
+    t_ai = threading.Thread(target=_drain, args=("ai ", ai), daemon=True)
+    t_ai.start()
+
     try:
         while True:
             if app.poll() is not None:
@@ -142,19 +160,6 @@ def cmd_up(args):
             if ai.poll() is not None:
                 print("/ai stopped. Exiting...")
                 break
-            if app.stdout and not app.stdout.closed:
-                while True:
-                    line = app.stdout.readline()
-                    if not line:
-                        break
-                    sys.stdout.write(f"[app] {line}")
-            if ai.stdout and not ai.stdout.closed:
-                while True:
-                    line = ai.stdout.readline()
-                    if not line:
-                        break
-                    sys.stdout.write(f"[ai ] {line}")
-            sys.stdout.flush()
             time.sleep(0.2)
     except KeyboardInterrupt:
         print("\nStopping services...")

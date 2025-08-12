@@ -5,7 +5,7 @@ import logging
 
 from helly_ai.application.container import make_rag_pipeline, make_member_resolution_service
 from helly_ai.domain.protocols import FeedbackItem, QueryResponse
-from helly_ai.domain.resolution import ResolveCandidate, ResolveRequest, ResolveResponse
+from helly_ai.domain.resolution import ResolveCandidate, ResolveResponse
 
 logger = logging.getLogger("helly_ai.api")
 
@@ -37,6 +37,12 @@ async def ingest_member_corpus(req: IngestRequest):
 async def query(req: QueryRequest):
     logger.info("/query text_len=%d person_hint=%s", len(req.text or ""), req.person_hint)
     return _pipeline.answer(question=req.text, time_range=(req.from_, req.to), person_hint=req.person_hint)
+
+class ResolveRequest(BaseModel):
+    text: str
+    candidates: Optional[List[ResolveCandidate]] = None
+    context: Optional[str] = None
+
 
 @router.post("/resolve/member", response_model=ResolveResponse)
 async def resolve_member(req: ResolveRequest):
