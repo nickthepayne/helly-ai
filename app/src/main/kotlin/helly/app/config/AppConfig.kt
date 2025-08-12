@@ -6,19 +6,13 @@ import helly.app.domain.Feedback
 import helly.app.domain.TeamMember
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Profile
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 @Configuration
 class AppConfig {
-
-    // In-memory repositories (MVP)
-    @Bean
-    fun teamMemberRepository(): TeamMemberRepository = InMemoryTeamMemberRepository()
-
-    @Bean
-    fun feedbackRepository(): FeedbackRepository = InMemoryFeedbackRepository()
 
     @Bean
     fun eventPublisher(): EventPublisher = NoopEventPublisher()
@@ -42,7 +36,17 @@ class AppConfig {
         AskService(aiClient, entityResolutionService)
 }
 
-// Implementations
+// In-memory repository implementations (active when profile 'inmem' is selected)
+@Profile("inmem")
+@Configuration
+class InmemRepositoriesConfig {
+    @Bean
+    fun teamMemberRepository(): TeamMemberRepository = InMemoryTeamMemberRepository()
+
+    @Bean
+    fun feedbackRepository(): FeedbackRepository = InMemoryFeedbackRepository()
+}
+
 class InMemoryTeamMemberRepository : TeamMemberRepository {
     private val data = ConcurrentHashMap<String, TeamMember>()
     override fun create(member: TeamMember): TeamMember {

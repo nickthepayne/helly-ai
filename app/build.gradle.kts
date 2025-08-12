@@ -14,6 +14,13 @@ repositories { mavenCentral() }
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+
+    // Data layer
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    implementation("org.springframework.boot:spring-boot-starter-jooq")
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.xerial:sqlite-jdbc:3.46.0.0")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 

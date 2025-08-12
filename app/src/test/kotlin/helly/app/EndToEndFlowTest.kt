@@ -17,6 +17,7 @@ import java.util.*
 
 @SpringBootTest(classes = [Application::class], webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(EndToEndFlowTest.TestOverrides::class)
+@org.springframework.test.context.ActiveProfiles("db")
 class EndToEndFlowTest {
 
     @LocalServerPort
